@@ -2,6 +2,138 @@
 
 Fire TV app that picks what a whole family can watch tonight: age-safe, group-balanced recommendations that learn from feedback.
 
+## Getting started
+
+The app is React Native TV (`react-native-tvos`); the only native project in the
+repository is `android/` (there is no `ios/` folder). Each command below is
+labelled with the directory it must be run from.
+
+### Prerequisites
+
+Install on a fresh macOS machine:
+
+1. **Node.js ≥ 18** — required by `package.json` (`engines.node`).
+2. **JDK 17** — required by the React Native 0.76 / Android Gradle Plugin
+   toolchain. For example: `brew install --cask temurin@17`.
+3. **Android SDK command-line tools** — via Android Studio's SDK Manager, or
+   `brew install --cask android-commandlinetools`. Make sure `sdkmanager` is on
+   your `PATH`.
+
+Add these exports to your shell profile (adjust `ANDROID_HOME` to your SDK root):
+
+```sh
+export JAVA_HOME="$(/usr/libexec/java_home -v 17)"
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+```
+
+Install the SDK components pinned by `android/build.gradle` (compileSdk 35,
+build-tools 35.0.0, NDK 26.1.10909125) and accept the licences:
+
+```sh
+sdkmanager "platform-tools" "emulator" "platforms;android-35" \
+  "build-tools;35.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
+sdkmanager --licenses          # or: yes | sdkmanager --licenses
+```
+
+Then either keep `ANDROID_HOME` exported, or point the project at the SDK with a
+git-ignored `android/local.properties` (run from the repository root):
+
+```sh
+echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+```
+
+### Install dependencies
+
+From the repository root:
+
+```sh
+git clone https://github.com/adithyasaikp-ai/everyones-pick.git
+cd everyones-pick
+npm ci
+```
+
+A committed `package-lock.json` (lockfileVersion 3) matches `package.json`, so
+`npm ci` installs the exact locked tree; use `npm install` only when you intend to
+change dependencies.
+
+Keep the repository's `.npmrc`. It sets `legacy-peer-deps=true` because
+`react-native-tvos` is published as a **prerelease**
+(`npm:react-native-tvos@0.76.9-0`) that does not satisfy the strict peer ranges
+some community libraries declare. With this setting npm resolves those peer
+dependencies leniently instead of aborting with an `ERESOLVE` error; removing it
+can make `npm ci` / `npm install` fail.
+
+### Start an Android TV emulator
+
+Install a TV system image — `arm64-v8a` on Apple Silicon, `x86_64` on Intel hosts
+— then create and boot an AVD. Run these from the repository root:
+
+```sh
+# Apple Silicon:
+sdkmanager "system-images;android-34;android-tv;arm64-v8a"
+# Intel:
+sdkmanager "system-images;android-34;android-tv;x86_64"
+
+avdmanager create avd -n EveryonesPickTV \
+  -k "system-images;android-34;android-tv;arm64-v8a" -d tv_1080p
+emulator -avd EveryonesPickTV &
+adb wait-for-device
+adb devices          # the emulator should be listed as `device`
+```
+
+### Start Metro and launch the app
+
+The debug build loads its JavaScript from Metro, so Metro must be running. Run
+both commands from the repository root, in separate terminals:
+
+```sh
+# Terminal 1 — Metro
+npm start
+
+# Terminal 2 — build, install and launch on the running emulator
+npm run android
+```
+
+To install an already-built debug APK instead (still from the repository root):
+
+```sh
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+adb reverse tcp:8081 tcp:8081
+adb shell am start -n com.everyonespick/.MainActivity
+```
+
+On first launch the household is empty, so add at least one family member (with
+an age) before requesting recommendations.
+
+### Verify the JavaScript
+
+Run from the repository root:
+
+```sh
+npm run verify        # typecheck + lint + tests (tsc, eslint, vitest)
+npm run test          # tests only (vitest run)
+npm run test:watch    # tests in watch mode
+npm run typecheck     # tsc --noEmit
+npm run lint          # eslint .
+npm run lint:fix      # eslint . --fix
+npm run format        # prettier --write
+npm run format:check  # prettier --check
+```
+
+### Build a debug APK
+
+Run Gradle from inside `android/`:
+
+```sh
+cd android
+./gradlew assembleDebug
+```
+
+The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. It is
+signed with the default debug keystore (`~/.android/debug.keystore`, created on
+demand); `android/app/build/` and `*.apk` are git-ignored.
+
 ## Recommendation engine
 
 The engine lives in `src/engine/` and is pure TypeScript — it has no React Native
@@ -134,13 +266,6 @@ entering text.
 Not yet verified: real Amazon Fire TV hardware, and the full multi-viewer and
 group-balancing scenarios (`balanced` / `borda` / `least-misery` / `average`) end to end.
 
-### Running and verifying
-
-```sh
-npm run verify   # typecheck + lint + tests
-npm run format:check
-```
-
 ## Known limitations
 
 - **Unverified data**: the sample catalog's ratings, years, runtimes and
@@ -154,6 +279,10 @@ npm run format:check
   APK. Building it requires a local Android SDK setup: JDK 17 plus the Android SDK
   (platform 35, build-tools 35.0.0, NDK 26.1.10909125), with `ANDROID_HOME` set or
   a local `android/local.properties`. The `ios/` folder is intentionally omitted.
+- **Release signing not configured**: `android/app/build.gradle` defines no
+  `signingConfig` for the `release` build type, so release builds are unsigned and
+  cannot be submitted to the Amazon Appstore as-is; a keystore and a release
+  signing config must be added first.
 - **No schema migration**: the version field is recorded but old payloads are
   only read leniently, not migrated field-by-field.
 - **Local only**: state is stored on-device via AsyncStorage; there is no sync,
