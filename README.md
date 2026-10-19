@@ -104,8 +104,8 @@ tested:
 - `src/ui/selection.ts` — group selection and feedback reactions.
 - `src/ui/presenters.ts` — domain-to-label formatting (runtime, ratings, reasons).
 - `src/ui/profileForm.ts` — validation and id generation for the add-person form.
-- `src/ui/components/` — `FocusableButton`, `FocusableCard`, `Chip`, `RatingBadge`,
-  `TitleCard`, `Screen`, `StateView`.
+- `src/ui/components/` — `FocusableButton`, `FocusableCard`, `FocusableTextInput`,
+  `Chip`, `RatingBadge`, `TitleCard`, `Screen`, `StateView`.
 - `src/ui/screens/` — `GroupSelectScreen`, `ProfileSetupScreen`,
   `RecommendationsScreen`, `TitleDetailScreen`.
 - `src/ui/useAppData.ts` / `src/ui/useRecommendations.ts` — load state through
@@ -115,6 +115,24 @@ The screens are wired in `src/App.tsx`. Flow: choose who is watching → pick fo
 group → open a title for details and record a like/dislike. TV focus is tracked with
 `onFocus`/`onBlur` plus `focusable` / `hasTVPreferredFocus`; the hardware Back button
 pops the navigation stack (and is left to the platform at the root).
+
+A bare `TextInput` cannot receive D-pad focus on Android TV in react-native-tvos, so
+`FocusableTextInput` wraps it in a focusable `Pressable` and focuses the inner input
+when the wrapper is focused or pressed. This makes the add-person Name and Age fields
+reachable and editable with the remote alone.
+
+### Device verification
+
+The app has been built and run on an Android 14 TV emulator (`EveryonesPickTV`, 1080p,
+ARM64) using D-pad input. Verified flows: launch; D-pad navigation across buttons,
+chips and cards; Android Back popping each screen; creating a profile and persisting
+it; age-safe recommendations rendering; opening a title's details; and Like feedback
+updating the recommendation reasoning. With `FocusableTextInput`, the Name and Age
+fields are reachable and usable by D-pad alone, including opening the keyboard and
+entering text.
+
+Not yet verified: real Amazon Fire TV hardware, and the full multi-viewer and
+group-balancing scenarios (`balanced` / `borda` / `least-misery` / `average`) end to end.
 
 ### Running and verifying
 
@@ -127,11 +145,15 @@ npm run format:check
 
 - **Unverified data**: the sample catalog's ratings, years, runtimes and
   popularity are invented and marked `metadataVerified: false`.
-- **Not device-verified**: the TV focus, Back-button and rendering behaviour has
-  not been run on a Fire TV device or emulator in this environment (no Android
-  SDK/`adb` present); it is validated by types, lint and unit tests only.
-- **No native project**: there is no committed `android/` folder; a native build
-  additionally requires JDK 17 (this environment has JDK 25).
+- **Partially device-verified**: the TV behaviour above was exercised on an
+  Android 14 TV emulator only. It has not been tested on real Amazon Fire TV
+  hardware, and the full multi-viewer and group-balancing scenarios have not been
+  verified end to end.
+- **Native project**: the Android project is included in the repository under
+  `android/` (generated from `@react-native-tvos/template-tv`) and builds a debug
+  APK. Building it requires a local Android SDK setup: JDK 17 plus the Android SDK
+  (platform 35, build-tools 35.0.0, NDK 26.1.10909125), with `ANDROID_HOME` set or
+  a local `android/local.properties`. The `ios/` folder is intentionally omitted.
 - **No schema migration**: the version field is recorded but old payloads are
   only read leniently, not migrated field-by-field.
 - **Local only**: state is stored on-device via AsyncStorage; there is no sync,

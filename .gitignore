@@ -147,3 +147,14 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Android (React Native TV)
+/android/.gradle/
+/android/app/.cxx/
+/android/build/
+/android/app/build/
+/android/app/release/
+/android/local.properties
+*.keystore
+*.apk
+*.aab

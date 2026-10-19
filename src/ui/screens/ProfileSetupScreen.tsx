@@ -1,9 +1,10 @@
 import {useState} from 'react';
-import {StyleSheet, Text, TextInput, View} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 
 import {GENRES, type Profile} from '../../domain/types';
 import {Chip} from '../components/Chip';
 import {FocusableButton} from '../components/FocusableButton';
+import {FocusableTextInput} from '../components/FocusableTextInput';
 import {Screen} from '../components/Screen';
 import {
   createProfileId,
@@ -78,22 +79,20 @@ export function ProfileSetupScreen({profiles, onAdd, onRemove, onBack}: Props) {
         <Text style={styles.sectionTitle}>Add a person</Text>
 
         <Text style={styles.label}>Name</Text>
-        <TextInput
+        <FocusableTextInput
           value={draft.name}
           onChangeText={name => update({name})}
           placeholder="e.g. Sam"
           placeholderTextColor={colors.textMuted}
-          style={styles.input}
         />
 
         <Text style={styles.label}>Age</Text>
-        <TextInput
+        <FocusableTextInput
           value={draft.age}
           onChangeText={age => update({age})}
           placeholder="e.g. 12"
           keyboardType="number-pad"
           placeholderTextColor={colors.textMuted}
-          style={styles.input}
         />
 
         <Text style={styles.label}>Favourite genres</Text>
@@ -175,17 +174,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    color: colors.text,
-    fontSize: fontSize.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    maxWidth: 520,
   },
   chips: {
     flexDirection: 'row',
